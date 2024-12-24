@@ -5,15 +5,15 @@ import {Script} from "forge-std/Script.sol";
 import {Travllr} from "../src/Travllr.sol";
 
 /**
- * @title TravllrScript
+ * @title DeployTravllr
  * @notice Deployment script for Travllr contract
  * @dev Uses Foundry's Script contract for deployment
  */
-contract TravllrScript is Script {
+contract DeployTravllr is Script {
     // Default values for constructor parameters
     uint256 private constant CHECK_IN_POINTS = 100;
     uint256 private constant CREATION_POINTS = 50;
-    uint256 private constant INITIAL_UPVOTE_THRESHOLD = 5;
+    uint256 private constant INITIAL_UPVOTE_THRESHOLD = 3;
 
     function run() external returns (Travllr) {
         // Start broadcasting transactions
@@ -23,7 +23,8 @@ contract TravllrScript is Script {
         Travllr travllr = new Travllr(
             CHECK_IN_POINTS,
             CREATION_POINTS,
-            INITIAL_UPVOTE_THRESHOLD
+            INITIAL_UPVOTE_THRESHOLD,
+            msg.sender
         );
 
         vm.stopBroadcast();

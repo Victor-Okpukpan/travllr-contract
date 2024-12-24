@@ -3,21 +3,17 @@
 pragma solidity 0.8.20;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-import "@openzeppelin/contracts/security/Pausable.sol";
-import "@openzeppelin/contracts/utils/math/SafeMath.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/utils/Pausable.sol";
 
 /**
  * @title Travllr
  * @dev A smart contract for a travel-to-earn platform where users can create tours, upvote tours, and check in to locations.
  *      Users are rewarded points for creating tours and checking in to existing tours.
  *      This contract incentivizes travel and location verification through community participation and point rewards.
- * @custom:security-contact security@travllr.com
  * @author Victor
  */
 contract Travllr is Ownable, ReentrancyGuard, Pausable {
-    using SafeMath for uint256;
-
     /// @notice Reverts when a tourId that does not exist is called
     /// @dev Thrown when accessing a tour with an ID >= total tour count
     error Travllr__tourDoesNotExist();
@@ -151,8 +147,9 @@ contract Travllr is Ownable, ReentrancyGuard, Pausable {
     constructor(
         uint256 checkInPoints,
         uint256 creationPoints,
-        uint256 initialUpvoteThreshold
-    ) {
+        uint256 initialUpvoteThreshold,
+        address owner
+    ) Ownable(owner) {
         i_checkInPoints = checkInPoints;
         i_creationPoints = creationPoints;
         s_upvoteThreshold = initialUpvoteThreshold;
@@ -201,7 +198,7 @@ contract Travllr is Ownable, ReentrancyGuard, Pausable {
         });
 
         emit TourCreated(s_tourCount, msg.sender, _location);
-        s_tourCount = s_tourCount.add(1);
+        s_tourCount++;
     }
 
     /**
@@ -252,7 +249,7 @@ contract Travllr is Ownable, ReentrancyGuard, Pausable {
         }
         s_upvoted[_tourId][msg.sender] = true;
 
-        tour.upvotes = tour.upvotes.add(1);
+        tour.upvotes++;
         if (tour.upvotes >= s_upvoteThreshold) {
             tour.isVerified = true;
         }
@@ -299,33 +296,12 @@ contract Travllr is Ownable, ReentrancyGuard, Pausable {
             })
         );
 
-        s_points[tour.creator] = s_points[tour.creator].add(i_creationPoints);
-        s_points[msg.sender] = s_points[msg.sender].add(i_checkInPoints);
+        s_points[tour.creator] += i_creationPoints;
+        s_points[msg.sender] += i_checkInPoints;
 
         emit CheckInConfirmed(_tourId, msg.sender);
         emit PointsAwarded(tour.creator, i_creationPoints);
         emit PointsAwarded(msg.sender, i_checkInPoints);
-    }
-
-    /**
-     * @notice Allows batch check-ins to multiple tours
-     * @param _tourIds Array of tour IDs
-     * @param _imageHashes Array of IPFS image hashes
-     * @param _locations Array of location strings
-     * @dev Arrays must be same length
-     */
-    function batchCheckIn(
-        uint256[] calldata _tourIds,
-        string[] calldata _imageHashes,
-        string[] calldata _locations
-    ) external whenNotPaused nonReentrant {
-        if (_tourIds.length != _imageHashes.length || _tourIds.length != _locations.length) {
-            revert Travllr__InvalidParameters();
-        }
-
-        for (uint256 i = 0; i < _tourIds.length; i++) {
-            checkIn(_tourIds[i], _imageHashes[i], _locations[i]);
-        }
     }
 
     /**
